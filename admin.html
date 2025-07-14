@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Trang Quản Lý Đáp Án</title>
+    <style>
+        body { font-family: sans-serif; }
+        .answer-item {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            position: relative;
+        }
+        .answer-item h3 { margin-top: 0; }
+        .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
+            color: red;
+            font-weight: bold;
+        }
+        #reset-all-btn {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Đáp Án Của 6 Thí Sinh</h1>
+    <button id="reset-all-btn">Reset Toàn Bộ Đáp Án</button>
+    <div id="answers-container">
+        </div>
+
+    <script>
+        const answersContainer = document.getElementById('answers-container');
+        const resetBtn = document.getElementById('reset-all-btn');
+
+        // Kết nối đến WebSocket Server
+        const ws = new WebSocket('ws://localhost:8080');
+
+        ws.onopen = () => {
+            console.log('Đã kết nối với server.');
+        };
+
+        ws.onmessage = event => {
+            // Nhận tin nhắn từ server, parse thành object
+            const data = JSON.parse(event.data);
+            console.log('Nhận dữ liệu cập nhật từ server:', data);
+
+            // Chỉ cập nhật hiển thị nếu đó là tin nhắn loại 'update'
+            if (data.type === 'update') {
+                updateDisplay(data.answers);
+            }
+        };
+
+        ws.onclose = () => {
+            console.log('Mất kết nối với server.');
+        };
+
+        // Hàm để cập nhật giao diện hiển thị đáp án
+        function updateDisplay(answers) {
+            // Xóa nội dung cũ
+            answersContainer.innerHTML = '';
+            
+            // Lặp qua từng đáp án và tạo thẻ HTML
+            const keys = Object.keys(answers);
+            if (keys.length === 0) {
+                answersContainer.innerHTML = '<p>Chưa có đáp án nào được gửi.</p>';
+                return;
+            }
+
+            keys.forEach(id => {
+                const answer = answers[id];
+                const div = document.createElement('div');
+                div.className = 'answer-item';
+                div.innerHTML = `
+                    <h3>Thí sinh: ${answer.name} (${id})</h3>
+                    <p><strong>Đáp án:</strong></p>
+                    <p>${answer.answer}</p>
+                    <button class="delete-btn" data-id="${id}">Xóa</button>
+                `;
+                answersContainer.appendChild(div);
+            });
+
+            // Gắn sự kiện cho các nút "Xóa" vừa tạo
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', () => {
+                    const idToDelete = button.getAttribute('data-id');
+                    if (ws.readyState === WebSocket.OPEN) {
+                        const data = {
+                            type: 'delete',
+                            id: idToDelete
+                        };
+                        ws.send(JSON.stringify(data));
+                    }
+                });
+            });
+        }
+
+        // Gắn sự kiện cho nút "Reset Toàn Bộ"
+        resetBtn.addEventListener('click', () => {
+            if (ws.readyState === WebSocket.OPEN) {
+                const data = { type: 'reset' };
+                ws.send(JSON.stringify(data));
+            }
+        });
+    </script>
+</body>
+</html>

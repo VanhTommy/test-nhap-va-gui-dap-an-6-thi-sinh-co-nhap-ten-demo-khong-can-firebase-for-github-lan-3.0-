@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Thí Sinh 4 - Nhập Đáp Án</title>
+</head>
+<body>
+    <h1>Thí Sinh 4</h1>
+    <form id="answer-form">
+        <label for="name">Tên của bạn:</label><br>
+        <input type="text" id="name" required><br><br>
+        
+        <label for="answer">Đáp án:</label><br>
+        <textarea id="answer" rows="10" cols="50" required></textarea><br><br>
+        
+        <button type="submit">Gửi Đáp Án</button>
+    </form>
+    <div id="status"></div>
+
+    <script>
+        // Cần thay đổi giá trị này cho từng trang thí sinh
+        // contestant1.html -> 'contestant1'
+        // contestant2.html -> 'contestant2'
+        // ...
+        const contestantId = 'contestant4'; 
+        
+        const form = document.getElementById('answer-form');
+        const nameInput = document.getElementById('name');
+        const answerInput = document.getElementById('answer');
+        const statusDiv = document.getElementById('status');
+
+        // Kết nối đến WebSocket Server
+        // Nếu server chạy trên máy khác, thay localhost bằng địa chỉ IP của máy chủ đó
+        const ws = new WebSocket('ws://localhost:8080');
+
+        ws.onopen = () => {
+            console.log('Đã kết nối với server.');
+            statusDiv.textContent = 'Đã kết nối!';
+        };
+
+        ws.onmessage = event => {
+            // Không cần làm gì nhiều trên trang thí sinh, chỉ cần biết đã kết nối
+            console.log('Nhận dữ liệu từ server:', event.data);
+        };
+
+        ws.onclose = () => {
+            console.log('Mất kết nối với server.');
+            statusDiv.textContent = 'Đã mất kết nối!';
+        };
+
+        form.addEventListener('submit', event => {
+            event.preventDefault(); // Ngăn form gửi dữ liệu theo cách thông thường
+
+            const name = nameInput.value;
+            const answer = answerInput.value;
+
+            // Gửi dữ liệu dưới dạng JSON
+            if (ws.readyState === WebSocket.OPEN) {
+                const data = {
+                    type: 'submit',
+                    id: contestantId,
+                    name: name,
+                    answer: answer
+                };
+                ws.send(JSON.stringify(data));
+                statusDiv.textContent = 'Đáp án đã được gửi!';
+            } else {
+                statusDiv.textContent = 'Không thể gửi. Mất kết nối với server.';
+            }
+        });
+    </script>
+</body>
+</html>
